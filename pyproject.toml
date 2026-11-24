@@ -17,6 +17,9 @@ dependencies = [
     "pypdfium2>=5,<6",
 ]
 
+[project.scripts]
+exam-circular-agent = "exam_circular_agent.cli:main"
+
 [project.optional-dependencies]
 test = ["pytest>=8,<10"]
 
