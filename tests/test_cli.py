@@ -1,8 +1,13 @@
 import json
+from contextlib import closing
 from datetime import UTC, datetime
+from pathlib import Path
 
+import httpx
 import pytest
 from icalendar import Calendar
+from openai import OpenAI
+from pypdfium2 import PdfDocument
 
 from exam_circular_agent.cli import main
 
@@ -92,3 +97,62 @@ def test_export_cannot_overwrite_input(inputs):
     original = calendar.read_bytes()
     assert main([*args, "--output", str(calendar)]) == 1
     assert calendar.read_bytes() == original
+
+
+def test_pdf_command_runs_the_page_loop_through_the_sdk(inputs, tmp_path, monkeypatch, capsys):
+    args, _ = inputs
+    pdf_path = tmp_path / "circular.pdf"
+    with closing(PdfDocument.new()) as pdf:
+        with closing(pdf.new_page(210, 300)), closing(pdf.new_page(210, 300)):
+            pdf.save(pdf_path)
+
+    schedule = json.loads(Path(args[1]).read_text(encoding="utf-8"))
+    decisions = [
+        {"page_to_inspect": 2, "schedule": None},
+        {"page_to_inspect": None, "schedule": schedule},
+    ]
+    image_counts = []
+
+    def respond(request):
+        payload = json.loads(request.content)
+        content = payload["input"][0]["content"]
+        image_counts.append(sum(item["type"] == "input_image" for item in content))
+        assert b"sample@example.invalid" not in request.content
+        assert payload["text"]["format"]["type"] == "json_schema"
+        assert payload["store"] is False
+        decision = decisions.pop(0)
+        return httpx.Response(
+            200,
+            json={
+                "id": "resp_demo",
+                "object": "response",
+                "status": "completed",
+                "output": [
+                    {
+                        "id": "msg_demo",
+                        "type": "message",
+                        "role": "assistant",
+                        "status": "completed",
+                        "content": [
+                            {
+                                "type": "output_text",
+                                "text": json.dumps(decision),
+                                "annotations": [],
+                            }
+                        ],
+                    }
+                ],
+            },
+        )
+
+    def make_client(**kwargs):
+        return OpenAI(
+            api_key="test-key",
+            http_client=httpx.Client(transport=httpx.MockTransport(respond)),
+            **kwargs,
+        )
+
+    monkeypatch.setattr("exam_circular_agent.cli.OpenAI", make_client)
+    assert main(["--circular", str(pdf_path), *args[2:]]) == 0
+    assert image_counts == [1, 2]
+    assert "Evidence  Page 2" in capsys.readouterr().out

@@ -109,8 +109,14 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     except OpenAIError as exc:
         status = getattr(exc, "status_code", None)
-        detail = f" (HTTP {status})" if status is not None else ""
-        print(f"Model request failed{detail}. Check OPENAI_API_KEY and model access.", file=sys.stderr)
+        if status == 429:
+            message = "Model request limited (HTTP 429). Check API quota or try again later."
+        elif status in {401, 403, 404}:
+            message = f"Model request failed (HTTP {status}). Check OPENAI_API_KEY and model access."
+        else:
+            detail = f" (HTTP {status})" if status is not None else ""
+            message = f"Model request failed{detail}. Check the API configuration and try again."
+        print(message, file=sys.stderr)
         return 1
     except (OSError, ValueError, PdfiumError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
