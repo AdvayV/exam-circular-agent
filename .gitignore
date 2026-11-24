@@ -9,3 +9,4 @@ build/
 *.pdf
 *.ics
 !examples/demo.ics
+!examples/demo.pdf
