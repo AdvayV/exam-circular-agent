@@ -1,5 +1,7 @@
 # Exam Circular Agent
 
+[![Tests](https://github.com/AdvayV/exam-circular-agent/actions/workflows/tests.yml/badge.svg)](https://github.com/AdvayV/exam-circular-agent/actions/workflows/tests.yml)
+
 Find out whether a revised exam circular affects your calendar. The agent reads
 the circular, shows matching changes with page references, and exports a revised
 calendar after you review it.
@@ -16,8 +18,15 @@ python -m pip install -e .
 exam-circular-agent --extraction examples/demo-extraction.json --calendar examples/demo.ics --programme "Online MCA" --term "Fall 2026"
 ```
 
-The saved extraction runs without an API key. The example proposes moving
-`CS101` to November 29 at 14:00 IST and leaves `CS205` alone.
+The saved extraction runs without an API key. It previews one change and
+keeps `CS205` at its existing time.
+
+```text
+[CS101] Machine Learning Exam
+  Current   2026-11-28 09:30 +0530 to 2026-11-28 11:30 +0530
+  Proposed  2026-11-29 14:00 +0530 to 2026-11-29 16:00 +0530
+  Evidence  Page 2 — CS101 | Machine Learning | 29 November 2026 | 14:00–16:00
+```
 
 ## Read a PDF
 
@@ -29,7 +38,8 @@ exam-circular-agent --circular examples/demo.pdf --calendar examples/demo.ics --
 ```
 
 The agent starts on page one. It lets the model request another page and checks
-that every cited page was inspected. The CLI defaults to `gpt-6-luna` and a
+that every cited page was inspected. Review the model's quoted row and extracted
+times against the PDF before exporting. The CLI defaults to `gpt-6-luna` and a
 five-page budget. Use `--model` with a model that supports image input and
 structured outputs, or `--max-pages` to adjust the page budget.
 
@@ -48,8 +58,9 @@ Exam`. The programme and term you give the CLI describe that calendar.
 Add `--output revised.ics` to preview changes and prompt for approval. The
 export writes a new file, preserves event IDs, and refuses to overwrite an
 existing file. Review the source rows before importing the update. Repeated
-course codes, recurring events, and conflicting source dates need manual review.
-This version updates existing exam times only.
+course codes, recurring events, conflicting source dates, and courses without a
+matching event appear as notes for manual review. This version updates existing
+exam times only.
 
 ## Tests
 
@@ -58,5 +69,6 @@ python -m pip install -e ".[test]"
 python -m pytest -q
 ```
 
-The tests run offline. They cover page selection, evidence checks, programme
-mismatch, calendar comparison, and approval before export.
+The tests run offline on GitHub Actions for Windows and Ubuntu. They cover the
+checked-in demo, page selection, evidence checks, programme mismatch, calendar
+comparison, and approval before export. PDF-mode tests mock API requests.

@@ -74,6 +74,7 @@ def compare_schedule(
     for code, exams in exams_by_code.items():
         candidates = events_by_code[code]
         if not candidates:
+            notes.append(f"{code}: no matching calendar event. Review manually.")
             continue
         if len(candidates) != 1:
             notes.append(f"{code}: multiple calendar events match. Review manually.")

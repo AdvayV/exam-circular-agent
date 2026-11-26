@@ -74,6 +74,13 @@ def test_conflicting_source_rows_are_withheld():
     assert "conflicting" in review.notes[0]
 
 
+def test_course_without_a_calendar_event_is_reported():
+    exam = make_exam().model_copy(update={"course_code": "CS205"})
+    review = compare(make_calendar(), make_schedule(exam))
+    assert review.changes == ()
+    assert review.notes == ("CS205: no matching calendar event. Review manually.",)
+
+
 def test_recurring_event_is_withheld():
     calendar = make_calendar()
     calendar.walk("VEVENT")[0].add("rrule", {"freq": "weekly"})

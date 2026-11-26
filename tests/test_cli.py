@@ -63,6 +63,23 @@ def inputs(tmp_path):
     ], calendar
 
 
+def test_checked_in_demo_previews_only_changed_course(monkeypatch, capsys):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    examples = Path(__file__).resolve().parents[1] / "examples"
+    args = [
+        "--extraction", str(examples / "demo-extraction.json"),
+        "--calendar", str(examples / "demo.ics"),
+        "--programme", "Online MCA",
+        "--term", "Fall 2026",
+    ]
+    assert main(args) == 0
+    preview = capsys.readouterr().out
+    assert "[CS101] Machine Learning Exam" in preview
+    assert "2026-11-29 14:00 +0530" in preview
+    assert "Evidence  Page 2" in preview
+    assert "CS205" not in preview
+
+
 def test_preview_prints_evidence_without_exporting(inputs, capsys):
     args, calendar = inputs
     assert main(args) == 0
